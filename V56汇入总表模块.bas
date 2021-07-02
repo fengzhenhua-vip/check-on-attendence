@@ -3,6 +3,7 @@ Attribute VB_Name = "V56汇入总表模块"
 ' 作者：冯振华
 ' 日期：2021年4月29日
 ' 作用：将每周统计的结果汇入总表，并对时间和违规结果排名，由于每周汇总结果需要人工校准，所认单独设置这一程序
+'
 
 Sub 汇入总表()
     Call 基础变量设置
@@ -20,7 +21,7 @@ Sub 汇入总表()
     Dim i, j, k, l, m, n, o, p As Integer
     Dim WriteSwitch As Integer
     Dim Imax, Jmax, TBRmax, TBCmax, HMRmax, HMCmax As Integer
-    TotalFolder = OutPath & "\" & Format(Now, "yyyy" & "年") & "统计异常总表"
+    TotalFolder = OutPath & "\" & Format(Now, "yyyy" & "年") & "统计总表"
     ToTeName = NameTeacherUN & Format(Now, "yyyy" & "年") & "总表"
     ToHeName = NameHeadMasterUN & Format(Now, "yyyy" & "年") & "总表"
     ToTeFile = TotalFolder & "\" & ToTeName & ".xlsx"
@@ -236,4 +237,5 @@ Sub 生成异常总表(InFile, InName)
     Application.DisplayAlerts = True
     Set ToTalBook = Nothing                                                         '取消ToTalBook
 End Sub
+
 
