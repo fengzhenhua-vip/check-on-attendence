@@ -1,8 +1,9 @@
 # check-on-attendence
-NO1. Middle School of PingYuan county COA system
 
- 得力E考勤系统V70
- 
+ 项目：COASMain
+
+ 版本:V71
+
  作者：冯振华
  
  单位：山东省平原县第一中学
@@ -36,3 +37,4 @@ NO1. Middle School of PingYuan county COA system
        9. 由于从顶层设计，所以结构清析，易于拓展，同时达到全年级考核5秒内完成，其实打开和关闭文件占据了大多数时间
        
        10. 由于重新构建及性能的大幅度提升，所以直接升级版本号V70
+' 日志：优化了少量代码，提升稳定性及性能，升级版本号V71
