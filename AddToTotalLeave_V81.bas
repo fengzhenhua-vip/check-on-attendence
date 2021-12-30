@@ -1,8 +1,8 @@
-Attribute VB_Name = "AddToTotalLeave_V72"
+Attribute VB_Name = "AddToTotalLeave_V81"
 ' 项目：AddToTotalLeave
-' 版本：V72
+' 版本：V81
 ' 作者：冯振华
-' 日期：2021年7月16日-2021年7月18日
+' 日期：2021年7月16日-2021年12月30日
 ' 作用：将每周统计的结果汇入总表，并对时间和违规结果排名，由于每周汇总结果需要人工校准，所认单独设置这一程序
 ' 日志：2021年7月13日-15日实现了第7代考勤系统，完全从顶层设计重新构建，并优化了显示格式，升级内容如下：
 '       1.适配COAV70的格式要求
@@ -10,11 +10,13 @@ Attribute VB_Name = "AddToTotalLeave_V72"
 '       3.提升版本号为V70，与COASMain相同，方便二者匹配的识别
 ' 日志：修复紧急bug,只有在异常教师和异常班主任报表打开时才执行汇入总表，同时优化了部分代码，兼容性得到提升，加入颜色显示结果，升级版本号V71
 ' 日志：修改ToTalSource中关于姓名和总数的引用列号为变量，因为COASMain_V72中使用了变量，为了与之匹配做了此小幅度修改，升级版本号V72
+' 日志：修复写入到总表时的错误，升级版本号V80，配合COAMain_V80使用2021/9/23
+' 日志：修复总表打开后隐藏不可见的bug,同时重新进行自动行高和列宽 升级版本号V81 2021/12/30
 
 Sub AddToTotalLeave()
     Application.ScreenUpdating = False
     Call COAConfigSet
-    If InStr(ActiveWorkbook.name, NameTeacherUN) > 0 Or InStr(ActiveWorkbook.name, NameHeadMasterUN) > 0 Then
+    If InStr(ActiveWorkbook.Name, NameTeacherUN) > 0 Or InStr(ActiveWorkbook.Name, NameHeadMasterUN) > 0 Then
         Dim ToTeFile, ToTeName, ToHeFile, ToHeName, ToTalDate, TotalFile, TotalName As String
         Dim WriteColumn As Integer
         Dim ToTalSource, TeacherSource, ToTalOut As Variant
@@ -31,15 +33,15 @@ Sub AddToTotalLeave()
         If SFO.FolderExists(TotalFolder) = False Then
            MkDir TotalFolder
         End If
-        If SFO.FileExists(ToTeFile) = False And InStr(ActiveWorkbook.name, NameTeacherUN) > 0 Then
+        If SFO.fileExists(ToTeFile) = False And InStr(ActiveWorkbook.Name, NameTeacherUN) > 0 Then
            Call CreatBook(ToTeFile, ToTeName)
         End If
-        If SFO.FileExists(ToHeFile) = False And InStr(ActiveWorkbook.name, NameHeadMasterUN) > 0 Then
+        If SFO.fileExists(ToHeFile) = False And InStr(ActiveWorkbook.Name, NameHeadMasterUN) > 0 Then
            Call CreatBook(ToHeFile, ToHeName)
         End If
-        If InStr(ActiveWorkbook.name, NameTeacherUN) > 0 Then
+        If InStr(ActiveWorkbook.Name, NameTeacherUN) > 0 Then
             TotalFile = ToTeFile: TotalName = ToTeName
-          ElseIf InStr(ActiveWorkbook.name, NameHeadMasterUN) > 0 Then
+          ElseIf InStr(ActiveWorkbook.Name, NameHeadMasterUN) > 0 Then
             TotalFile = ToHeFile: TotalName = ToHeName
         End If
 ' 异常报表调入数组ToTalSource
@@ -182,24 +184,27 @@ Sub AddToTotalLeave()
         Next
 ' 数组写入到目标文件
          Workbooks.Open Filename:=TotalFile
-         Range(Cells(1, 1), Cells(m, TBCmax + 1)) = TeacherSource
-         Cells(1, WriteColumn).NumberFormatLocal = DateFormat
-         k = Cells(1, ColMax).End(xlToLeft).Column
-         Call COAFormat(Range(Cells(1, 1), Cells(m, k)))
-         Range(Cells(1, 1), Cells(1, k)).Font.Bold = True
-         Cells.Interior.ColorIndex = 0
+         TBook.Sheets(TotalName).Range(TBook.Sheets(TotalName).Cells(1, 1), TBook.Sheets(TotalName).Cells(m, TBCmax + 1)) = TeacherSource
+         TBook.Sheets(TotalName).Cells(1, WriteColumn).NumberFormatLocal = DateFormat
+         k = TBook.Sheets(TotalName).Cells(1, ColMax).End(xlToLeft).Column
+         Call COAFormat(TBook.Sheets(TotalName).Range(TBook.Sheets(TotalName).Cells(1, 1), TBook.Sheets(TotalName).Cells(m, k)))
+         TBook.Sheets(TotalName).Range(TBook.Sheets(TotalName).Cells(1, 1), TBook.Sheets(TotalName).Cells(1, k)).Font.Bold = True
+         TBook.Sheets(TotalName).Cells.Interior.ColorIndex = 0
          For i = 2 To m
             For j = 4 To k
                 If Len(TeacherSource(i, j)) > 0 Then
                     If j Mod 2 = 1 Then
-                        Call COAColor(Cells(i, j), 37, 1)
+                        Call COAColor(TBook.Sheets(TotalName).Cells(i, j), 37, 1)
                     Else
-                        Call COAColor(Cells(i, j), 36, 1)
+                        Call COAColor(TBook.Sheets(TotalName).Cells(i, j), 36, 1)
                     End If
                 End If
             Next
          Next
-         Cells(1, 1).Select
+' 自动行高和列宽
+         Windows(TotalName).Visible = True                              '取消因格式化导致的表格隐藏，使其可见
+         TBook.Sheets(TotalName).Range(TBook.Sheets(TotalName).Cells(1, 1), TBook.Sheets(TotalName).Cells(m, k)).Rows.AutoFit
+         TBook.Sheets(TotalName).Range(TBook.Sheets(TotalName).Cells(1, 1), TBook.Sheets(TotalName).Cells(m, k)).Columns.AutoFit
          Workbooks(TotalName).Close savechanges:=True
      End If
      Application.ScreenUpdating = True
@@ -213,7 +218,7 @@ Sub CreatBook(InFile, InName)
         Cells(1, 1) = "排名"
         Cells(1, 2) = "姓名"
         Cells(1, 3) = "总数"
-        Sheets(1).name = InName
+        Sheets(1).Name = InName
         ActiveWorkbook.Close savechanges:=True
     Application.DisplayAlerts = True
     Set ToTalBook = Nothing                                                                              '取消ToTalBook
