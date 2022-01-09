@@ -8,7 +8,8 @@ Dim ZLBRmax, ZLBCmax, ZLBStep As Integer
 Dim ZLBScore As Integer
 ZLBScore = 20
 Dim ZLBSource As Variant
-COACfgPath = CreateObject("WScript.Shell").specialfolders("Desktop") & "\考勤系统"                          '默认设置为桌面
+'COACfgPath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\考勤系统"                          '默认设置为桌面
+COACfgPath = "D:\考勤系统" & COAVersion
 ZLBPath = ActiveWorkbook.Path
 '
 Set SFO = CreateObject("Scripting.FileSystemObject")
@@ -25,7 +26,7 @@ If InStr(ActiveWorkbook.Name, "异常班主任") > 0 Then
 '基本信息设置
     ZLBYue = CInt(Mid(ActiveWorkbook.Name, 24, 2))
     ZLBRi = CInt(Mid(ActiveWorkbook.Name, 27, 2))
-    ZLBZhou = Fix(ZLBRi / 7)
+    ZLBZhou = Fix(ZLBRi / 7) + 1
     ZLBName = "高三文理部" & ZLBYue & "月份第" & ZLBZhou & "周量化"
     ZLBFile = ZLBPath & "\" & ZLBName & ".xlsx"
     If SFO.fileExists(ZLBFile) = False Then
@@ -54,32 +55,48 @@ If InStr(ActiveWorkbook.Name, "异常班主任") > 0 Then
     fpath = ActiveWorkbook.Path & "\周量化报表打印"
 '录入课堂加分
     fName = Dir(fpath & "\班级*")
-    Set fBook = GetObject(fpath & "\" & fName)
-    fCol = fBook.Sheets(1).Cells(1, 100).End(xlToLeft).Column
-    For i = 3 To 38
-        ZLBBook.Sheets(1).Cells(i, 8) = fBook.Sheets(1).Cells(i, fCol)
-    Next
+    If fName = Empty Then
+        MsgBox "请导入“班级文化”"
+    Else
+        Set fBook = GetObject(fpath & "\" & fName)
+        fCol = fBook.Sheets(1).Cells(1, 100).End(xlToLeft).Column
+        For i = 3 To 38
+            ZLBBook.Sheets(1).Cells(i, 8) = fBook.Sheets(1).Cells(i, fCol)
+        Next
+    End If
 ' 录入卫生
     fName = Dir(fpath & "\高三卫生*")
-    Set fBook = GetObject(fpath & "\" & fName)
-    fCol = fBook.Sheets(1).Cells(4, 100).End(xlToLeft).Column
-    For i = 3 To 38
-        ZLBBook.Sheets(1).Cells(i, 4) = fBook.Sheets(1).Cells(i + 2, fCol)
-    Next
+    If fName = Empty Then
+        MsgBox "请导入“卫生检查”"
+    Else
+        Set fBook = GetObject(fpath & "\" & fName)
+        fCol = fBook.Sheets(1).Cells(4, 100).End(xlToLeft).Column
+        For i = 3 To 38
+            ZLBBook.Sheets(1).Cells(i, 4) = fBook.Sheets(1).Cells(i + 2, fCol)
+        Next
+    End If
 ' 录入激情诵读
     fName = Dir(fpath & "\激情*")
-    Set fBook = GetObject(fpath & "\" & fName)
-    fCol = fBook.Sheets(1).Cells(2, 100).End(xlToLeft).Column
-    For i = 3 To 38
-        ZLBBook.Sheets(1).Cells(i, 6) = fBook.Sheets(1).Cells(i, fCol)
-    Next
+    If fName = Empty Then
+        MsgBox "请导入“激情宣誓”"
+    Else
+        Set fBook = GetObject(fpath & "\" & fName)
+        fCol = fBook.Sheets(1).Cells(2, 100).End(xlToLeft).Column
+        For i = 3 To 38
+            ZLBBook.Sheets(1).Cells(i, 6) = fBook.Sheets(1).Cells(i, fCol)
+        Next
+    End If
 ' 录入作业展
     fName = Dir(fpath & "\作业展*")
-    Set fBook = GetObject(fpath & "\" & fName)
-    fCol = fBook.Sheets(1).Cells(3, 100).End(xlToLeft).Column
-    For i = 3 To 38
-        ZLBBook.Sheets(1).Cells(i, 5) = fBook.Sheets(1).Cells(i + 1, fCol)
-    Next
+    If fName = Empty Then
+        MsgBox "请导入“作业展”"
+    Else
+        Set fBook = GetObject(fpath & "\" & fName)
+        fCol = fBook.Sheets(1).Cells(3, 100).End(xlToLeft).Column
+        For i = 3 To 38
+            ZLBBook.Sheets(1).Cells(i, 5) = fBook.Sheets(1).Cells(i + 1, fCol)
+        Next
+    End If
     Application.ScreenUpdating = True
  ' 关闭及退出
      Application.DisplayAlerts = False                                                                                          '关闭所有工作薄
@@ -87,7 +104,7 @@ If InStr(ActiveWorkbook.Name, "异常班主任") > 0 Then
       Workbooks.Close
      Application.DisplayAlerts = True
      Application.Quit
-     Shell "explorer.exe " & ZLBPath, vbNormalFocus
+'     Shell "explorer.exe " & ZLBPath, vbNormalFocus   '由于处理报表时是在班主任目录下，所以可以不必再次打开文件夹，但是保留这条命令
 End If
 End Sub
 
