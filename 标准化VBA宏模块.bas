@@ -1,43 +1,42 @@
 Attribute VB_Name = "标准化VBA宏模块"
-Public Const STRowMax As Double = 65536 '按office2007标准设定1048576
-Public Const STColMax As Double = 256 '按office2007标准设定16384
-Public Const CheckLine As Double = 100  '100行（列）内应该按通常处理的数据来讲是包含了最大值了，所以为了提高效率，设置此值足够了
+Public Arr, ArrOut As Variant '默认使用的临时数组,在程序中可以使用Redim随机重新定义
 
 Sub 标准VBA排名(ShName, RowB, ICol, OCol)
-'版本： V1.0
+'版本： V2.0
 '作者：冯振华
 '时间：2022年1月14日17：20
 '功能：对于某一列数值，按大小排名，并标准好名次
 '四个参量依次为：工作表名，开始行，输入列，输出列
     Dim Arr As Variant
     Dim TempValue, TempMin As Double
-    Dim i, j, k, p, q, RowE As Integer
-    Dim ARROut(1 To STRowMax, 1 To 2) As Variant
+    Dim i, j, k, p, q, RowE, RowEX As Integer
     If ICol = OCol Then
         MsgBox "排名输出列与输入列相同 ！"                   '输入列与输出列相同时，退出程序，不与排名
         End
     End If
-    RowE = Sheets(ShName).Cells(STRowMax, ICol).End(xlUp).Row
+    RowEX = Sheets(ShName).Range("A1").SpecialCells(xlLastCell).Row + 1 '取得最后一行
+    RowE = Sheets(ShName).Cells(RowEX, ICol).End(xlUp).Row
+    ReDim ArrOut(1 To RowE, 1 To 2) As Variant
     If RowB >= RowE Then
         MsgBox "排序结束行数小于等于开始行数 ！"
         End
     End If
     Arr = Sheets(ShName).Range(Sheets(ShName).Cells(RowB, ICol), Sheets(ShName).Cells(RowE, ICol))
-    TempMin = CDbl(Application.WorksheetFunction.Small(Arr, 1) - 1)
+    TempMin = CDbl(Application.WorksheetFunction.Small(Arr, 1)) - CDbl(Application.WorksheetFunction.Large(Arr, 1)) - 1
     k = 1
 ArrBegin:
     q = 0
     TempValue = CDbl(Application.WorksheetFunction.Large(Arr, 1)) ' 此处借用了excel函数求最大，也可以自己采用for next来求最大值
     For i = 1 To UBound(Arr, 1)
         If Arr(i, 1) = TempValue Then
-            Arr(i, 1) = TempMin: ARROut(i, 1) = k: q = q + 1
+            Arr(i, 1) = TempMin: ArrOut(i, 1) = k: q = q + 1
         End If
     Next
     k = k + q
     If k <= UBound(Arr, 1) Then
         GoTo ArrBegin:
     End If
-    Sheets(ShName).Range(Sheets(ShName).Cells(RowB, OCol), Sheets(ShName).Cells(RowE, OCol)) = ARROut
+    Sheets(ShName).Range(Sheets(ShName).Cells(RowB, OCol), Sheets(ShName).Cells(RowE, OCol)) = ArrOut
 End Sub
 Sub 标准VBA提取(ShName, RowB, ICol, OShName, ORowB, OCol)
 ' 版本：V1.0
@@ -45,7 +44,6 @@ Sub 标准VBA提取(ShName, RowB, ICol, OShName, ORowB, OCol)
 ' 时间：2022年1月14日17:29
     Dim Arr As Variant
     Dim i, j, k, p, q, RowE As Integer
-    Dim ARROut(1 To STRowMax, 1 To 2) As Variant
     Dim sht As Worksheet
     j = 0: q = 0
     For Each sht In ActiveWorkbook.Sheets
@@ -64,7 +62,7 @@ Sub 标准VBA提取(ShName, RowB, ICol, OShName, ORowB, OCol)
         MsgBox OShName & "不存在，请填写正确的“输出报表”名称 ！"
         End
     End If
-    RowE = Sheets(ShName).Cells(STRowMax, ICol).End(xlUp).Row
+    RowE = Sheets(ShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     If ShName = OShName Then
         If ICol = OCol Then
             MsgBox "输出列与输入列相同 ！"                   '输入列与输出列相同时，退出程序，不与排名
@@ -76,12 +74,13 @@ Sub 标准VBA提取(ShName, RowB, ICol, OShName, ORowB, OCol)
         End
     End If
     Arr = Sheets(ShName).Range(Sheets(ShName).Cells(RowB, ICol), Sheets(ShName).Cells(RowE, ICol))
+    ReDim ArrOut(1 To RowE, 1 To 2) As Variant
     k = 1: p = 0
 TQBegin:
     p = p + 1
-    ARROut(p, 1) = Arr(k, 1)
+    ArrOut(p, 1) = Arr(k, 1)
     For i = k To UBound(Arr, 1)
-        If Arr(i, 1) = ARROut(p, 1) Then
+        If Arr(i, 1) = ArrOut(p, 1) Then
             Arr(i, 1) = Empty
         End If
     Next
@@ -91,22 +90,22 @@ TQBegin:
     If k <= UBound(Arr, 1) And Len(Arr(k, 1)) > 0 Then
         GoTo TQBegin:
     End If
-    Sheets(OShName).Range(Sheets(OShName).Cells(ORowB, OCol), Sheets(OShName).Cells(ORowB + p - 1, OCol)) = ARROut
-'    MsgBox Application.WorksheetFunction.Large(ARROut, 1)
+    Sheets(OShName).Range(Sheets(OShName).Cells(ORowB, OCol), Sheets(OShName).Cells(ORowB + p - 1, OCol)) = ArrOut
 End Sub
 Sub 标准VBA排序(IShName, IRowB, ICol, ShunXu)
 ' 版本：V1.0
 ' 作者：冯振华
 ' 时间：2022年1月14日19:19
 ' 功能：只对一列按拼音排序，不是对于拓展行排序
-    Dim RowE As Integer
+    Dim RowE, RowEX As Integer
     Dim ShengJiang As String
     If ShunXu = 1 Then
-        ShengJiang = xlDescending   '降序
+        ShengJiang = xlDescending   '降序1
     Else
-        ShengJiang = xlAscending    '升序
+        ShengJiang = xlAscending    '升序0
     End If
-    RowE = Sheets(IShName).Cells(STRowMax, ICol).End(xlUp).Row
+    RowEX = Sheets(IShName).Range("A1").SpecialCells(xlLastCell).Row + 1 '取得最后一行
+    RowE = Sheets(IShName).Cells(RowEX, ICol).End(xlUp).Row
     ActiveWorkbook.Worksheets(IShName).Sort.SortFields.Clear
     ActiveWorkbook.Worksheets(IShName).Sort.SortFields.Add2 Key:=Sheets(IShName).Range(Sheets(IShName).Cells(IRowB, ICol), Sheets(IShName).Cells(RowE, ICol)), _
         SortOn:=xlSortOnValues, Order:=ShengJiang, DataOption:=xlSortNormal
@@ -135,7 +134,7 @@ Sub 标准VBA填充(IShName, IRowB, ICol1, ICol2, OShName, ORowB, OCol1, OCol2)
     Else
         MsgBox IShName & ICol1 & "与" & ICol2 & "相同，请重新输入 ！"
     End If
-    IRowE = Sheets(IShName).Cells(STRowMax, ICol1).End(xlUp).Row
+    IRowE = Sheets(IShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     IArr = Sheets(IShName).Range(Sheets(IShName).Cells(IRowB, IColMin), Sheets(IShName).Cells(IRowE, IColMax))
     If OCol1 < OCol2 Then
         OColMin = OCol1: OColMax = OCol2
@@ -144,7 +143,7 @@ Sub 标准VBA填充(IShName, IRowB, ICol1, ICol2, OShName, ORowB, OCol1, OCol2)
     Else
         MsgBox OShName & OCol1 & "与" & OCol2 & "相同，请重新输入 ！"
     End If
-    ORowE = Sheets(OShName).Cells(STRowMax, OCol1).End(xlUp).Row
+    ORowE = Sheets(OShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     OArr = Sheets(OShName).Range(Sheets(OShName).Cells(ORowB, OColMin), Sheets(OShName).Cells(ORowE, OColMax))
     m = ICol1 - IColMin + 1: n = OCol1 - OColMin + 1
     p = ICol2 - IColMin + 1: q = OCol2 - OColMin + 1
@@ -173,7 +172,7 @@ Sub 标准VBA分数段人数(IShName, IRowB, ICol1, ICol2, OShName, ORowB, OCol1, OCol2
     Else
         MsgBox IShName & ICol1 & "与" & ICol2 & "相同，请重新输入 ！"
     End If
-    IRowE = Sheets(IShName).Cells(STRowMax, ICol1).End(xlUp).Row
+    IRowE = Sheets(IShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     IArr = Sheets(IShName).Range(Sheets(IShName).Cells(IRowB, IColMin), Sheets(IShName).Cells(IRowE, IColMax))
     If OCol1 < OCol2 Then
         OColMin = OCol1: OColMax = OCol2
@@ -182,7 +181,7 @@ Sub 标准VBA分数段人数(IShName, IRowB, ICol1, ICol2, OShName, ORowB, OCol1, OCol2
     Else
         MsgBox OShName & OCol1 & "与" & OCol2 & "相同，请重新输入 ！"
     End If
-    ORowE = Sheets(OShName).Cells(STRowMax, OCol1).End(xlUp).Row
+    ORowE = Sheets(OShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     OArr = Sheets(OShName).Range(Sheets(OShName).Cells(ORowB, OColMin), Sheets(OShName).Cells(ORowE, OColMax))
     m = ICol1 - IColMin + 1: n = OCol1 - OColMin + 1
     p = ICol2 - IColMin + 1: q = OCol2 - OColMin + 1
@@ -208,7 +207,7 @@ Public Function ScoreLine(ShName, NumLine, RowB, ICol)
     Dim RowE As Integer
     Dim i, j, k As Integer
     Dim UpNum, DownNum As Integer
-    RowE = Sheets(ShName).Cells(STRowMax, ICol).End(xlUp).Row
+    RowE = Sheets(ShName).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
     ArrBak = Sheets(ShName).Range(Sheets(ShName).Cells(RowB, ICol), Sheets(ShName).Cells(RowE, ICol))
     Call 标准VBA排序(ShName, RowB, ICol, 1)
     Arr = Sheets(ShName).Range(Sheets(ShName).Cells(RowB, ICol), Sheets(ShName).Cells(RowE, ICol))
@@ -255,7 +254,7 @@ Sub 标准VBA拆分工作薄(CFName)
     Application.DisplayAlerts = False
     For Each sht In ActiveWorkbook.Sheets
         sht.Select: sht.Copy
-        ActiveWorkbook.SaveAs Filename:=CFFolder & "\" & sht.Name & CFName, FileFormat:=xlNormal  '将工作簿另存为EXCEL默认格式
+        ActiveWorkbook.SaveAs Filename:=CFFolder & "\" & sht.Name & CFName, FileFormat:=xlOpenXMLWorkbook '将工作簿另存为EXCEL默认2007格式 2003格式xlNormal
         ActiveWorkbook.Close
     Next
     Application.DisplayAlerts = True
@@ -263,25 +262,19 @@ Sub 标准VBA拆分工作薄(CFName)
 End Sub
 Sub 标准VBA合并工作薄()
     Dim fpath, fname As String
-    Dim Arr(STRowMax) As String
     Dim CurFil, OtherFil As String
     Dim OArr As Variant
     Dim CurBook As Workbook
     Dim Imax, Jmax As Integer
-    Imax = 1000: Jmax = 100
-    Dim i, j, k, m, n, p, q As Integer
+    Dim i, j, k, m, n, p, q, r As Integer
     Dim sht, osht As Worksheet
     Dim ActiveShtName As String
     For Each sht In ActiveWorkbook.Sheets
-        n = 0
-        For m = 1 To 10
-            If Len(Sheets(sht.Name).Cells(m, 1)) > 0 Then
-                n = 1
-            End If
-        Next
-        If n = 1 Then
-                 MsgBox "当前工作薄非空，请重新创建一个空的工作薄，再执行合并工作表命令 ！"
-                 End
+        m = Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Row '取得最后一行
+        n = Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Column '取得最后一列
+        If m > 1 Or n > 1 Then
+            MsgBox "当前工作薄非空，请重新创建一个空的工作薄，再执行合并工作表命令 ！"
+            End
         End If
     Next
     fpath = ActiveWorkbook.Path
@@ -289,7 +282,7 @@ Sub 标准VBA合并工作薄()
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False
     fname = Dir(fpath & "\*.xl*")
-    i = i + 1
+    i = 1: ReDim Arr(i) As Variant
     Arr(i) = fname
     Do While fname <> ""
         fname = Dir
@@ -297,25 +290,22 @@ Sub 标准VBA合并工作薄()
             Exit Do
         End If
         i = i + 1
+        ReDim Preserve Arr(i) As Variant
         Arr(i) = fname
     Loop
     For p = 1 To i
         If Arr(p) <> CurFil Then
             Set CurBook = GetObject(fpath & "\" & Arr(p))
             If InStr(Arr(p), "xlsx") > 0 Then
-                OtherFil = Left(Arr(1), Len(Arr(1)) - 5)
+                OtherFil = Left(Arr(p), Len(Arr(p)) - 5)
             Else
-                OtherFil = Left(Arr(1), Len(Arr(1)) - 4)
+                OtherFil = Left(Arr(p), Len(Arr(p)) - 4)
             End If
             For Each osht In CurBook.Sheets
-                k = 0
-                For j = 1 To 10   ' 探测第一列前10行，如果均为空，则认为此工作表是空的，不合并到新表中
-                    If Len(CurBook.Sheets(osht.Name).Cells(j, 1)) > 0 Then
-                        k = 1
-                    End If
-                Next
-                If k = 1 Then
-                    ActiveShtName = Left(Arr(p), Len(Arr(1)) - 5) & "(" & osht.Name & ")"
+                Imax = CurBook.Sheets(osht.Name).Range("A1").SpecialCells(xlLastCell).Row    '取得最后一行
+                Jmax = CurBook.Sheets(osht.Name).Range("A1").SpecialCells(xlLastCell).Column '取得最后一列
+                If Imax > 1 Or Jmax > 1 Then
+                    ActiveShtName = OtherFil & "(" & osht.Name & ")"
                     OArr = CurBook.Sheets(osht.Name).Range(CurBook.Sheets(osht.Name).Cells(1, 1), CurBook.Sheets(osht.Name).Cells(Imax, Jmax))
                     q = 0
                     For Each sht In ActiveWorkbook.Sheets
@@ -333,14 +323,12 @@ Sub 标准VBA合并工作薄()
         End If
     Next
     For Each sht In ActiveWorkbook.Sheets
-        n = 0
-        For m = 1 To 10
-            If Len(Sheets(sht.Name).Cells(m, 1)) > 0 Then
-                n = 1
+        m = sht.Range("A1").SpecialCells(xlLastCell).Row    '取得最后一行
+        n = sht.Range("A1").SpecialCells(xlLastCell).Column '取得最后一列
+        If m = 1 And n = 1 Then
+            If Len(sht.Cells(1, 1)) = 0 Then
+                sht.Delete
             End If
-        Next
-        If n = 0 Then
-                 sht.Delete
         End If
     Next
     Application.ScreenUpdating = True
@@ -369,27 +357,19 @@ Sub 标准VBA按行合并工作表()
     If SFO.fileExists(Hfile) = False Then
         Application.DisplayAlerts = False
         Workbooks.Add.SaveAs Filename:=Hfile
-        Sheets(1).Name = "合并"
+        Sheets(1).Name = "按行合并"
         For Each sht In CurBook.Sheets
-            Imax = CurBook.Sheets(sht.Name).Cells(STRowMax, 1).End(xlUp).Row                 '暂时按第一行和第一列获取最大范围
-            Jmax = CurBook.Sheets(sht.Name).Cells(1, STColMax).End(xlToLeft).Column
-            For j = 2 To CheckLine
-                If Imax < CurBook.Sheets(sht.Name).Cells(STRowMax, j).End(xlUp).Row Then
-                    Imax = CurBook.Sheets(sht.Name).Cells(STRowMax, j).End(xlUp).Row
-                End If
-            Next
-            For i = 2 To CheckLine
-                If Jmax < CurBook.Sheets(sht.Name).Cells(i, STColMax).End(xlToLeft).Column Then
-                    Jmax = CurBook.Sheets(sht.Name).Cells(i, STColMax).End(xlToLeft).Column
-                End If
-            Next
+            Imax = CurBook.Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Row    '取得最后一行
+            Jmax = CurBook.Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Column '取得最后一列
             Arr = CurBook.Sheets(sht.Name).Range(CurBook.Sheets(sht.Name).Cells(1, 1), CurBook.Sheets(sht.Name).Cells(Imax, Jmax))
-            IBegin = Cells(STRowMax, 1).End(xlUp).Row
-            For j = 2 To CheckLine
-                If IBegin < Cells(STRowMax, j).End(xlUp).Row Then
-                    IBegin = Cells(STRowMax, j).End(xlUp).Row
+            IBegin = Sheets("按行合并").Range("A1").SpecialCells(xlLastCell).Row
+            i = Sheets("按行合并").Range("A1").SpecialCells(xlLastCell).Column
+            If i = 1 And IBegin = 1 Then
+                If Len(Sheets("按行合并").Cells(1, 1)) = 0 Then
+                    IBegin = 0
                 End If
-            Next
+            End If
+            IBegin = IBegin + 1
             IEnd = IBegin + Imax - 1
             Range(Cells(IBegin, 1), Cells(IEnd, Jmax)) = Arr
         Next
@@ -422,27 +402,19 @@ Sub 标准VBA按列合并工作表()
     If SFO.fileExists(Hfile) = False Then
         Application.DisplayAlerts = False
         Workbooks.Add.SaveAs Filename:=Hfile
-        Sheets(1).Name = "合并"
+        Sheets(1).Name = "按列合并"
         For Each sht In CurBook.Sheets
-            Imax = CurBook.Sheets(sht.Name).Cells(STRowMax, 1).End(xlUp).Row
-            Jmax = CurBook.Sheets(sht.Name).Cells(1, STColMax).End(xlToLeft).Column                 '暂时按第一行和第一列获取最大范围
-            For j = 2 To CheckLine
-                If Imax < CurBook.Sheets(sht.Name).Cells(STRowMax, j).End(xlUp).Row Then
-                    Imax = CurBook.Sheets(sht.Name).Cells(STRowMax, j).End(xlUp).Row
-                End If
-            Next
-            For i = 2 To CheckLine
-                If Jmax < CurBook.Sheets(sht.Name).Cells(i, STColMax).End(xlToLeft).Column Then
-                    Jmax = CurBook.Sheets(sht.Name).Cells(i, STColMax).End(xlToLeft).Column
-                End If
-            Next
+            Imax = CurBook.Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Row    '取得最后一行
+            Jmax = CurBook.Sheets(sht.Name).Range("A1").SpecialCells(xlLastCell).Column '取得最后一列
             Arr = CurBook.Sheets(sht.Name).Range(CurBook.Sheets(sht.Name).Cells(1, 1), CurBook.Sheets(sht.Name).Cells(Imax, Jmax))
-            IBegin = Cells(1, STColMax).End(xlToLeft).Column
-            For j = 2 To CheckLine
-                If IBegin < Cells(j, STColMax).End(xlToLeft).Column Then
-                    IBegin = Cells(j, STColMax).End(xlToLeft).Column
+            IBegin = Sheets("按列合并").Range("A1").SpecialCells(xlLastCell).Column
+            i = Sheets("按列合并").Range("A1").SpecialCells(xlLastCell).Row
+            If i = 1 And IBegin = 1 Then
+                If Len(Sheets("按列合并").Cells(1, 1)) = 0 Then
+                    IBegin = 0
                 End If
-            Next
+            End If
+            IBegin = IBegin + 1
             IEnd = IBegin + Jmax - 1
             Range(Cells(1, IBegin), Cells(Imax, IEnd)) = Arr
         Next
@@ -454,34 +426,19 @@ Sub 标准VBA按列合并工作表()
     Application.DisplayAlerts = True
 End Sub
 Sub 标准VBA转置()
-    Dim i, j, k As Integer
+' 版本：V2.0
+' 日志：原本采用了数组方式直接变换的，但是为了提高兼容性直接调用了Excel的函数，这样更加简洁好用
     Dim Imax, Jmax, Zmax As Integer
     Dim Arr As Variant
-    Dim Brr(1 To CheckLine, 1 To CheckLine) As Variant
-    Imax = Sheets(ActiveSheet.Name).Cells(STRowMax, 1).End(xlUp).Row
-    Jmax = Sheets(ActiveSheet.Name).Cells(1, STColMax).End(xlToLeft).Column                '暂时按第一行和第一列获取最大范围
-    For j = 2 To CheckLine
-        If Imax < Sheets(ActiveSheet.Name).Cells(STRowMax, j).End(xlUp).Row Then
-            Imax = Sheets(ActiveSheet.Name).Cells(STRowMax, j).End(xlUp).Row
-        End If
-    Next
-    For i = 2 To CheckLine
-        If Jmax < Sheets(ActiveSheet.Name).Cells(i, STColMax).End(xlToLeft).Column Then
-            Jmax = Sheets(ActiveSheet.Name).Cells(i, STColMax).End(xlToLeft).Column
-        End If
-    Next
+    Imax = ActiveSheet.Range("A1").SpecialCells(xlLastCell).Row         '取得最后一行
+    Jmax = ActiveSheet.Range("A1").SpecialCells(xlLastCell).Column      '取得最后一列
     If Imax > Jmax Then
         Zmax = Imax
     Else
         Zmax = Jmax
     End If
     Arr = Range(Cells(1, 1), Cells(Zmax, Zmax))
-    For i = 1 To Zmax
-        For j = 1 To Zmax
-            Brr(i, j) = Arr(j, i)
-        Next
-    Next
-    Range(Cells(1, 1), Cells(Zmax, Zmax)) = Brr
+    Range(Cells(1, 1), Cells(Zmax, Zmax)) = Application.Transpose(Arr)  'Transpose取转置
 End Sub
 
 Sub 标准VBA工具箱()
